@@ -11,7 +11,7 @@ __all__ = [
     'UnboundTenantError'
 ]
 
-SQLA_VERSION_8 = sqlalchemy.__version__.startswith('0.8')
+SQLA_VERSION_11 = sqlalchemy.__version__.startswith('1.3')
 
 
 class UnboundTenantError(Exception):
@@ -83,7 +83,7 @@ class TenantSession(session.Session):
 
     def add(self, instance, *args, **kwargs):
         self.check_instance(instance)
-        instance.tenant_id = self.tenant.id
+        instance.team_id = self.tenant.id
         super(TenantSession, self).add(instance, *args, **kwargs)
 
     def delete(self, instance, *args, **kwargs):
@@ -100,11 +100,11 @@ class TenantSession(session.Session):
                 "Tried to do a tenant-safe operation in a tenantless context.")
 
         if instance.__multitenant__ and instance.tenant_id is not None and \
-           instance.tenant_id != self.tenant.id:
+           instance.team_id != self.tenant.id:
             raise TenantConflict((
                 "Tried to use a %r with tenant_id %r in a session with " +
                 "tenant_id %r") % (
-                    type(instance), instance.tenant_id, self.tenant.id))
+                    type(instance), instance.team_id, self.tenant.id))
 
 
 class TenantQuery(query.Query):
@@ -131,7 +131,7 @@ class TenantQuery(query.Query):
 
     def _join_to_left(self, *args, **kwargs):
 
-        right = args[1 if SQLA_VERSION_8 else 2]
+        right = args[1 if SQLA_VERSION_11 else 2]
         super(TenantQuery, self)._join_to_left(*args, **kwargs)
 
         _process_from(inspection.inspect(right).selectable, self)
@@ -158,7 +158,7 @@ def _process_from(from_, query, query_context=None):
     if not getattr(query, '_safe', None):
         return
 
-    tenant_id_col = from_.c.get('tenant_id')
+    tenant_id_col = from_.c.get('team_id')
     if tenant_id_col is not None:
         if query.session.tenant is None:
             raise UnboundTenantError(
