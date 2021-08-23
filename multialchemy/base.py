@@ -11,7 +11,7 @@ __all__ = [
     'UnboundTenantError'
 ]
 
-SQLA_VERSION_11 = sqlalchemy.__version__.startswith('1.3')
+SQLA_VERSION_8 = sqlalchemy.__version__.startswith('0.8')
 
 
 class UnboundTenantError(Exception):
@@ -45,13 +45,13 @@ class Base(object):
     # abandoning this for now as it causes unexpected SQLAlchemy error
     #@declared_attr
     #def tenant(cls):
-        #if not cls.__multitenant__:
-            #return None
+    #if not cls.__multitenant__:
+    #return None
 
-        #return relationship(
-                #cls._tenant_cls, primaryjoin=(cls.tenant_id ==
-                                              #cls._tenant_cls.id), 
-                #backref=cls._tenant_cls.__tablename__)
+    #return relationship(
+    #cls._tenant_cls, primaryjoin=(cls.tenant_id ==
+    #cls._tenant_cls.id),
+    #backref=cls._tenant_cls.__tablename__)
 
 
 def after_tenant_insert(mapper, connection, target):
@@ -76,7 +76,7 @@ class TenantSession(session.Session):
 
         super(TenantSession, self).__init__(
                 query_cls=query_cls, *args, **kwargs)
-        
+
     def query(self, *args, **kwargs):
         kwargs.setdefault('safe', True)
         return super(TenantSession, self).query(*args, **kwargs)
@@ -99,7 +99,7 @@ class TenantSession(session.Session):
             raise UnboundTenantError(
                 "Tried to do a tenant-safe operation in a tenantless context.")
 
-        if instance.__multitenant__ and instance.tenant_id is not None and \
+        if instance.__multitenant__ and instance.team_id is not None and \
            instance.team_id != self.tenant.id:
             raise TenantConflict((
                 "Tried to use a %r with tenant_id %r in a session with " +
@@ -131,7 +131,7 @@ class TenantQuery(query.Query):
 
     def _join_to_left(self, *args, **kwargs):
 
-        right = args[1 if SQLA_VERSION_11 else 2]
+        right = args[1 if SQLA_VERSION_8 else 2]
         super(TenantQuery, self)._join_to_left(*args, **kwargs)
 
         _process_from(inspection.inspect(right).selectable, self)
